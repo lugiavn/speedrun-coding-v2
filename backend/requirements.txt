@@ -1,0 +1,11 @@
+Django==4.2.10
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.3.1
+psycopg2-binary==2.9.9
+gunicorn==21.2.0
+markdown==3.5.2
+django-filter==23.5
+requests==2.31.0
+django-cors-headers==4.7.0
+drf-yasg==1.21.7
+uritemplate==4.1.1 

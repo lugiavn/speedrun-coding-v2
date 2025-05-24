@@ -1,0 +1,81 @@
+services:
+  # PostgreSQL database
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # - ./init-scripts:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_DB=speedruncoding
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Django backend
+  backend:
+    build: ./backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8005:8005"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/speedruncoding
+      - DEBUG=1
+      # Replace with 0 in prod.
+      - CSRF_COOKIE_SECURE=False
+      # Replace with True in prod.
+      - ALLOWED_HOSTS=['*']
+      # Replace with your EC2 domain/IP in prod.
+      - CORS_ALLOWED_ORIGINS=["http://localhost:3000"]
+      # Replace with your EC2 domain/IP in prod.
+
+  # Next.js frontend
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+      # Replace with production in prod.
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://127.0.0.1:8005/api
+    depends_on:
+      - backend
+    command: npm run dev
+    
+  # Piston Code Execution Engine
+  piston:
+    build: ./piston
+    privileged: true
+    ports:
+      - "2000:2000"
+    volumes:
+      - piston_data:/piston/packages
+    #  - ./data/piston/packages:/piston/packages
+    # Add any necessary environment variables for Piston if needed later
+    # e.g., for resource limits, though many are set per API call
+    # environment:
+    #   - PISTON_MAX_RUN_TIME=3000 # milliseconds
+    # networks: # Docker Compose v2 usually handles this by default
+    #   - default 
+    # 3) Use a tmpfs for /tmp so Isolate can mount and exec safely
+    tmpfs:
+      - /tmp:exec
+
+volumes:
+  postgres_data:
+  piston_data:
